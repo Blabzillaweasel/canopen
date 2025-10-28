@@ -57,10 +57,13 @@ def import_eds(source, node_id):
         logger.warn("eds file does not have a DeviceInfo section. This section is mandatory")
     else:
         for rate in [10, 20, 50, 125, 250, 500, 800, 1000]:
-            baudPossible = int(
-                eds.get("DeviceInfo", f"BaudRate_{rate}", fallback='0'), 0)
-            if baudPossible != 0:
-                od.device_information.allowed_baudrates.add(rate*1000)
+            try:
+                baudPossible = int(
+                    eds.get("DeviceInfo", f"BaudRate_{rate}", fallback='0'), 0)
+                if baudPossible != 0:
+                    od.device_information.allowed_baudrates.add(rate*1000)
+            except ValueError:
+                pass
 
         for t, eprop, odprop in [
             (str, "VendorName", "vendor_name"),
@@ -87,16 +90,23 @@ def import_eds(source, node_id):
                     setattr(od.device_information, odprop,
                             eds.get("DeviceInfo", eprop)
                             )
-            except NoOptionError:
+            except (ValueError, NoOptionError):
                 pass
 
     if eds.has_section("DeviceComissioning"):
-        if val := eds.getint("DeviceComissioning", "Baudrate", fallback=None):
-            od.bitrate = val * 1000
+        try:
+            if val := eds.getint("DeviceComissioning", "Baudrate", fallback=None):
+                od.bitrate = val * 1000
+        except ValueError:
+            pass
 
         if node_id is None:
-            if val := eds.get("DeviceComissioning", "NodeID", fallback=None):
-                node_id = int(val, base=0)
+            try:
+                if val := eds.get("DeviceComissioning", "NodeID", fallback=None):
+                    node_id = int(val, base=0)
+            except ValueError:
+                pass
+                    
         od.node_id = node_id
 
     for section in eds.sections():
@@ -105,11 +115,14 @@ def import_eds(source, node_id):
         if match is not None:
             for i in range(1, 8):
                 key = f"Dummy{i:04d}"
-                if eds.getint(section, key) == 1:
-                    var = ODVariable(key, i, 0)
-                    var.data_type = i
-                    var.access_type = "const"
-                    od.add_object(var)
+                try:
+                    if eds.getint(section, key) == 1:
+                        var = ODVariable(key, i, 0)
+                        var.data_type = i
+                        var.access_type = "const"
+                        od.add_object(var)
+                except ValueError:
+                    pass
 
         # Match indexes
         match = re.match(r"^[0-9A-Fa-f]{4}$", section)
