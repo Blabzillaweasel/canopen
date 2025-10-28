@@ -87,7 +87,7 @@ def import_eds(source, node_id):
                     setattr(od.device_information, odprop,
                             eds.get("DeviceInfo", eprop)
                             )
-            except NoOptionError:
+            except (ValueError, NoOptionError):
                 pass
 
     if eds.has_section("DeviceComissioning"):
