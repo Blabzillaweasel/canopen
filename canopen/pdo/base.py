@@ -354,13 +354,15 @@ class PdoMap:
             Read using SDO if False, read from object dictionary if True.
             When reading from object dictionary, if DCF populated a value, the
             DCF value will be used, otherwise the EDS default will be used instead.
+            
+            If EDS default is empty, reverts to reading from SDO.
         """
 
         def _raw_from(param):
             if from_od:
                 if param.od.value is not None:
                     return param.od.value
-                else:
+                elif param.od.default is not None:
                     return param.od.default
             return param.raw
 
